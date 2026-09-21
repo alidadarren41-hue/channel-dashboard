@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>渠道商客戶狀況大看板｜FY27</title>
-:root{
   /* 深色高質感工業外貿商務風 */
   --bg:#0c0f14; --surface:#151a22; --ink:#e2e6ec; --muted:#7a8699; --line:#252c38;
   --accent:#e8720c; --accent-2:#f59e45; --accent-soft:#1f1508;
@@ -198,6 +197,7 @@ footer ul{margin-left:18px;margin-top:6px} footer li{margin:3px 0}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0 0}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+</head>
 </head>
 <body>
 <header class="hero"><div class="wrap">
@@ -608,6 +608,13 @@ function spCard(k) {
 if (SP.status === 'OK' && SP.periods) {
   const M = SP.periods.month || null, Q = SP.periods.quarter || null;
   const p4pBal = D.p4pBalance || {sum:0, with_balance:0, clients:0, data_date:''};
+  /* P4P 未消耗餘額警示分層（渠道經理 2026-09-21 指定）
+     > 10 萬 → 豔紅（存量過高＝錢躺著沒動）
+     5–10 萬 → 黃橘
+     <= 5 萬 → 綠
+     門檻寫在這裡一處，改門檻只改這行。 */
+  const P4P_HIGH = 100000, P4P_MID = 50000;
+  const p4pCls = p4pBal.sum > P4P_HIGH ? 'bad' : (p4pBal.sum >= P4P_MID ? 'warn' : 'good');
 
   if (Q) {
     const qc = Q.channel, qt = Q.total, qd = Q.direct;
@@ -632,8 +639,9 @@ if (SP.status === 'OK' && SP.periods) {
       {lbl:'月度 本渠道 OKKI', val:n(mc.okki), sub:'全部來自小滿-以馬內利（中南區）', cls:''},
       {lbl:'月度 本渠道 P4P 消耗', val:n(mc.kwa_deduct), sub:'等於 ads_rev '+n(mc.ads), cls:''},
       {lbl:'渠道客戶 P4P 未消耗餘額', val:n(p4pBal.sum),
-        sub:'P4P 有餘額 '+p4pBal.with_balance+' / '+p4pBal.clients+' 家｜可補營收缺口的存量（源① '+esc(p4pBal.data_date||'')+'）',
-        cls: p4pBal.sum>0?'good':''},
+        sub:'P4P 有餘額 '+p4pBal.with_balance+' / '+p4pBal.clients+' 家｜可補營收缺口的存量（源① '+esc(p4pBal.data_date||'')+'）'
+            +'<br>分層：>10 萬豔紅／5–10 萬黃橘／≤5 萬綠',
+        cls:p4pCls},
       {lbl:'月度 台灣大區 GS', val:n(mt.gs), sub:'直銷 '+n(md.gs)+'｜本渠道 '+n(mc.gs), cls:''},
       {lbl:'月度 台灣大區 OKKI', val:n(mt.okki), sub:'直銷 '+n(md.okki)+'｜本渠道 '+n(mc.okki), cls:''},
     ].map(spCard).join('');
