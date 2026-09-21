@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>渠道商客戶狀況大看板｜FY27</title>
-<style>
 :root{
   /* 深色高質感工業外貿商務風 */
   --bg:#0c0f14; --surface:#151a22; --ink:#e2e6ec; --muted:#7a8699; --line:#252c38;
@@ -199,7 +198,6 @@ footer ul{margin-left:18px;margin-top:6px} footer li{margin:3px 0}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0 0}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
-</style>
 </head>
 <body>
 <header class="hero"><div class="wrap">
@@ -405,11 +403,19 @@ const n = v => (v===null||v===undefined) ? '—' : Number(v).toLocaleString('zh-
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* tabs */
+const tabsEl = document.getElementById('tabs');
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); document.getElementById(b.dataset.t).classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
+  b.classList.add('on');
+  const panel = document.getElementById(b.dataset.t);
+  panel.classList.add('on');
+  /* 切換後停在「新分頁內容的頂端」，讓使用者直接往下讀；
+     原本是 window.scrollTo(top:0) 直接彈回頁首，讀到一半會被拉走。
+     扣掉吸頂分頁列的高度，內容才不會被蓋住。 */
+  const offset = (tabsEl ? tabsEl.offsetHeight : 0) + 10;
+  const y = panel.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({top: Math.max(0, y), behavior:'smooth'});
 });
 
 /* KPI */
@@ -478,8 +484,9 @@ function orgChip(org, bold) {
   $('#org-legend').innerHTML = items.length
     ? '<div class="card" style="padding:12px 16px"><div class="lbl" style="font-size:11px;color:var(--muted);'
       + 'letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px">渠道商色別對照</div>'
-      + '<div class="legend-chips">' + items.map(([k,c]) =>
-          '<span class="ochip" style="--c:' + c + '">' + esc(k) + '</span>').join('') + '</div></div>'
+      /* ⚠️ 必須走 orgChip()，不要自己拼 style：色帶變數是 --band，自己寫容易沿用舊名
+         （曾經寫成 --c 導致圖例整排落到灰色 fallback） */
+      + '<div class="legend-chips">' + items.map(([k]) => orgChip(k)).join('') + '</div></div>'
     : '';
 })();
 
@@ -535,9 +542,9 @@ $('#grp-table').innerHTML = '<thead><tr><th>主管組</th><th class="n">客戶�
 
 $('#cl-table').innerHTML = '<thead><tr><th>公司名稱</th><th>客戶經理</th><th>區域</th><th>金品</th><th class="n">P4P 餘額</th><th class="n">近30天消耗</th><th class="n">消耗天數</th><th class="n">有效產品數</th><th class="n">詢盤</th><th class="n">掛賬訂單</th><th>狀態</th></tr></thead><tbody>' +
  D.clients.slice().sort((a,b)=>(b.p4p_balance||0)-(a.p4p_balance||0)).map(c=>{
-   const has=(c.p4p_balance||0)>0, sp=(c.p4p_spend_30d||0)>0, po=(c.posted_orders_30d||0)>0;
+   const has=(c.p4p_balance||0)>0, sp=(c.p4p_spend_30d||0)>0;
    const st = has? (sp?'<span class="pill up">投放中</span>':'<span class="pill flat">有餘額未投放</span>') : '<span class="pill down">無 P4P 餘額</span>';
-       return `<tr><td>${esc(c.company)}</td><td>${esc(c.manager)}</td><td>${esc(c.region)}</td><td>${c.gold==='Y'?'<span class="gold-mark">✔ 金品</span>':'—'}</td><td class="n">${n(c.p4p_balance)}</td><td class="n">${n(c.p4p_spend_30d)}</td><td class="n">${n(c.p4p_active_days)}</td><td class="n">${n(c.products)}</td><td class="n">${n(c.inquiries_30d)}</td><td class="n">${n(c.posted_orders_30d)}${po?' <span class="pill up">有</span>':''}</td><td>${st}</td></tr>`;
+       return `<tr><td>${esc(c.company)}</td><td>${esc(c.manager)}</td><td>${esc(c.region)}</td><td>${c.gold==='Y'?'<span class="gold-mark">✔ 金品</span>':'—'}</td><td class="n">${n(c.p4p_balance)}</td><td class="n">${n(c.p4p_spend_30d)}</td><td class="n">${n(c.p4p_active_days)}</td><td class="n">${n(c.products)}</td><td class="n">${n(c.inquiries_30d)}</td><td class="n">${n(c.posted_orders_30d)}</td><td>${st}</td></tr>`;
  }).join('') + '</tbody>';
 
 /* ---------- panel 2 ---------- */
@@ -805,8 +812,14 @@ $('#rev-table').innerHTML = '<thead><tr><th>渠道商</th><th class="n">CRM 客�
 
 /* ---------- panel 4 ---------- */
 $('#cm-date').textContent = '2026-09-20';
-const orgRow=(kind,o)=>`<tr class="${o.activated<o.clients?'alert-row':''}"><td><span class="tag">${kind}</span></td><td>${orgChip(o.org)}</td><td class="n">${o.clients}</td><td class="n">${o.activated}${o.activated<o.clients?' <span class="pill down">未激活 '+(o.clients-o.activated)+'</span>':''}</td><td class="n">${n(o.revenue)}</td></tr>`;
-$('#cm-table').innerHTML = '<thead><tr><th>類別</th><th>渠道商</th><th class="n">客戶數</th><th class="n">已激活</th><th class="n">營收金額</th></tr></thead><tbody>' +
+const orgRow=(kind,o)=>{
+  const off = Math.max(0, (o.clients||0) - (o.activated||0));
+  return `<tr class="${off>0?'alert-row':''}"><td><span class="tag">${kind}</span></td><td>${orgChip(o.org)}</td>`
+    + `<td class="n">${o.clients}</td><td class="n">${o.activated}</td>`
+    + `<td class="n">${off>0?'<span class="pill down">'+off+'</span>':'0'}</td>`
+    + `<td class="n">${n(o.revenue)}</td></tr>`;
+};
+$('#cm-table').innerHTML = '<thead><tr><th>類別</th><th>渠道商</th><th class="n">客戶數</th><th class="n">已激活</th><th class="n">未激活</th><th class="n">營收金額</th></tr></thead><tbody>' +
  D.crmOrgs.map(o=>orgRow('CRM',o)).join('') +
  D.airOrgs.map(o=>orgRow('AiReach',o)).join('') + '</tbody>';
 $('#bundle-note').innerHTML = `CRM 未激活 <b>${D.crmNotAct}</b> 家、AiReach 未激活 <b>${D.airNotAct}</b> 家 — 未激活者不計入佣金，需渠道商盡速完成開通。`;
