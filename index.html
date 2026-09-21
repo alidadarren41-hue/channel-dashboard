@@ -98,7 +98,7 @@ td.grp{background:#131b26;color:#8899ae;font-weight:800;font-size:12px;letter-sp
   box-shadow:inset 0 -4px 0 var(--band,#4a5568);
   color:#c8ced8}
 .ochip b{color:#e2e6ec}
-.ochip{padding:3px 10px 5px}
+.ochip{padding:3px 10px 5px;background:linear-gradient(180deg,var(--band-bg,#1a2030) 0%,#151a22 100%)}
 .ochip .ochip-dot{display:none}
 .legend-chips{display:flex;flex-wrap:wrap;gap:9px;margin:10px 0 4px}
 .legend-chips .ochip{font-size:12px;padding:4px 13px 7px;border-radius:999px}
@@ -410,12 +410,12 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   b.classList.add('on');
   const panel = document.getElementById(b.dataset.t);
   panel.classList.add('on');
-  /* 切換後停在「新分頁內容的頂端」，讓使用者直接往下讀；
-     原本是 window.scrollTo(top:0) 直接彈回頁首，讀到一半會被拉走。
-     扣掉吸頂分頁列的高度，內容才不會被蓋住。 */
-  const offset = (tabsEl ? tabsEl.offsetHeight : 0) + 10;
-  const y = panel.getBoundingClientRect().top + window.pageYOffset - offset;
-  window.scrollTo({top: Math.max(0, y), behavior:'smooth'});
+  /* 切換後往下滾到新分頁內容的頂端（扣掉分頁列高度），讓使用者直接看到內容 */
+  requestAnimationFrame(()=>{
+    const tabsH = tabsEl ? tabsEl.offsetHeight : 0;
+    const panelTop = panel.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({top: Math.max(0, panelTop - tabsH - 12), behavior:'smooth'});
+  });
 });
 
 /* KPI */
